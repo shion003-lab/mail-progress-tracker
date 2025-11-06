@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:type="MessageReadCommandSurface">
+  <Id>c78a2a5b-ec11-47a5-bb56-89b6ef9a6a61</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>MailProgressTracker</ProviderName>
+  <DefaultLocale>ja-JP</DefaultLocale>
+  <DisplayName DefaultValue="メール進捗管理" />
+  <Description DefaultValue="Outlookメール本文に進捗情報を共有挿入するアドイン" />
+  <IconUrl DefaultValue="https://outlookaddinassets.blob.core.windows.net/icons/progress-icon.png" />
+  <HighResolutionIconUrl DefaultValue="https://outlookaddinassets.blob.core.windows.net/icons/progress-icon.png" />
+  <SupportUrl DefaultValue="https://example.com/support" />
+
+  <Hosts>
+    <Host Name="Mailbox" />
+  </Hosts>
+
+  <Requirements>
+    <Sets DefaultMinVersion="1.8">
+      <Set Name="Mailbox" />
+    </Sets>
+  </Requirements>
+
+  <Permissions>ReadWriteMailbox</Permissions>
+
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read" />
+  </Rule>
+
+  <ExtensionPoint xsi:type="MessageReadCommandSurface">
+    <OfficeTab id="TabDefault">
+      <Group id="msgReadGroup">
+        <Label resid="groupLabel" />
+        <Control xsi:type="Button" id="progressButton">
+          <Label resid="buttonLabel" />
+          <Supertip>
+            <Title resid="buttonLabel" />
+            <Description resid="buttonDesc" />
+          </Supertip>
+          <Icon>
+            <bt:Image size="16" resid="icon16" />
+            <bt:Image size="32" resid="icon32" />
+          </Icon>
+          <Action xsi:type="ShowTaskpane">
+            <SourceLocation resid="taskPaneUrl" />
+            <Title resid="taskPaneTitle" />
+          </Action>
+        </Control>
+      </Group>
+    </OfficeTab>
+  </ExtensionPoint>
+
+  <Resources>
+    <bt:Images>
+      <bt:Image id="icon16" DefaultValue="https://outlookaddinassets.blob.core.windows.net/icons/progress16.png" />
+      <bt:Image id="icon32" DefaultValue="https://outlookaddinassets.blob.core.windows.net/icons/progress32.png" />
+    </bt:Images>
+
+    <bt:Urls>
+      <bt:Url id="taskPaneUrl" DefaultValue="https://localhost:3000/taskpane.html" />
+    </bt:Urls>
+
+    <bt:ShortStrings>
+      <bt:String id="groupLabel" DefaultValue="進捗管理" />
+      <bt:String id="buttonLabel" DefaultValue="進捗を更新" />
+      <bt:String id="taskPaneTitle" DefaultValue="進捗更新パネル" />
+    </bt:ShortStrings>
+
+    <bt:LongStrings>
+      <bt:String id="buttonDesc" DefaultValue="メール本文に進捗情報を挿入・更新します。" />
+    </bt:LongStrings>
+  </Resources>
+</OfficeApp>
