@@ -1,26 +1,22 @@
 Office.onReady(() => {
-  // 初期表示時に既存ステータス読み込み
-  loadStatus();
+  checkRecipientCondition();
   document.getElementById("updateBtn").onclick = updateStatus;
 });
 
-function loadStatus() {
-  Office.context.mailbox.item.loadCustomPropertiesAsync((result) => {
-    if (result.status === Office.AsyncResultStatus.Succeeded) {
-      const props = result.value;
-      const user = props.get("user") || "";
-      const status = props.get("status") || "未対応";
-      const updated = props.get("updated") || "";
+function checkRecipientCondition() {
+  const item = Office.context.mailbox.item;
+  const recipients = item.to || [];
 
-      document.getElementById("userName").value = user;
-      document.getElementById("status").value = status;
-      document.getElementById("result").innerText = updated
-        ? `最終更新：${updated}（${user}）`
-        : "進捗未登録";
-    } else {
-      document.getElementById("result").innerText = "進捗情報を読み込めませんでした。";
-    }
-  });
+  const target = "aomori-olp@openloop.co.jp";
+  const matched = recipients.some(r =>
+    (r.emailAddress || "").toLowerCase() === target.toLowerCase()
+  );
+
+  if (!matched) {
+    document.getElementById("updateBtn").disabled = true;
+    document.getElementById("result").innerText =
+      "このメールは対象外です（aomori-olp@openloop.co.jp宛でのみ有効）";
+  }
 }
 
 function updateStatus() {
@@ -46,3 +42,4 @@ function updateStatus() {
     }
   });
 }
+
