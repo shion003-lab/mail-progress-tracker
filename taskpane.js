@@ -5,12 +5,22 @@ Office.onReady(() => {
 
 function checkRecipientCondition() {
   const item = Office.context.mailbox.item;
-  const recipients = item.to || [];
-
   const target = "aomori-olp@openloop.co.jp";
-  const matched = recipients.some(r =>
-    (r.emailAddress || "").toLowerCase() === target.toLowerCase()
-  );
+  let matched = false;
+
+  try {
+    // 通常は toRecipients に配列で格納されている
+    if (item.toRecipients && item.toRecipients.length > 0) {
+      matched = item.toRecipients.some(r =>
+        (r.emailAddress || "").toLowerCase() === target.toLowerCase()
+      );
+    } else if (item.displayTo) {
+      // Fallback: displayTo はカンマ区切りの文字列
+      matched = item.displayTo.toLowerCase().includes(target.toLowerCase());
+    }
+  } catch (e) {
+    console.error("宛先判定でエラー:", e);
+  }
 
   if (!matched) {
     document.getElementById("updateBtn").disabled = true;
@@ -42,4 +52,3 @@ function updateStatus() {
     }
   });
 }
-
