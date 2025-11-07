@@ -13,7 +13,7 @@
     const msalConfig = {
       auth: {
         clientId: "b36f2478-f887-48ca-b406-d21e17ddc5e7",
-        authority: "c1521ad5-8d23-4d3c-a5c4-e90a535b3c2a",
+        authority: "https://login.microsoftonline.com/c1521ad5-8d23-4d3c-a5c4-e90a535b3c2a", // ← 修正ポイント！
         redirectUri: "https://shion003-lab.github.io/mail-progress-tracker/auth.html"
       }
     };
@@ -25,18 +25,23 @@
     };
 
     document.getElementById("login").onclick = async () => {
-      const response = await msalInstance.loginPopup(loginRequest);
-      console.log("Login success:", response);
-      const account = response.account;
-      msalInstance.setActiveAccount(account);
+      try {
+        const response = await msalInstance.loginPopup(loginRequest);
+        console.log("Login success:", response);
+        const account = response.account;
+        msalInstance.setActiveAccount(account);
 
-      const tokenResponse = await msalInstance.acquireTokenSilent({
-        ...loginRequest,
-        account
-      });
+        const tokenResponse = await msalInstance.acquireTokenSilent({
+          ...loginRequest,
+          account
+        });
 
-      console.log("Access token:", tokenResponse.accessToken);
-      alert("ログイン成功！トークンを取得しました。コンソールを確認してください。");
+        console.log("Access token:", tokenResponse.accessToken);
+        alert("ログイン成功！トークンを取得しました。コンソールを確認してください。");
+      } catch (err) {
+        console.error("Login error:", err);
+        alert("ログインに失敗しました。詳細はコンソールを確認してください。");
+      }
     };
   </script>
 </body>
