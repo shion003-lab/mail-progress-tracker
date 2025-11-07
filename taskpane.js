@@ -17,12 +17,11 @@ function saveProgress() {
       props.saveAsync((res) => {
         if (res.status === Office.AsyncResultStatus.Succeeded) {
           document.getElementById("result").innerText = "進捗情報を保存しました。";
+          showPreview(user, status, now);
         } else {
           document.getElementById("result").innerText = "保存に失敗しました。";
         }
       });
-    } else {
-      document.getElementById("result").innerText = "プロパティの読み込みに失敗しました。";
     }
   });
 }
@@ -32,16 +31,49 @@ function loadProgress() {
     if (result.status === Office.AsyncResultStatus.Succeeded) {
       const props = result.value;
       const user = props.get("user") || "";
-      const status = props.get("status") || "";
+      const status = props.get("status") || "未対応";
       const updated = props.get("updated") || "";
 
-      if (user || status || updated) {
-        document.getElementById("userName").value = user;
-        document.getElementById("status").value = status || "未対応";
-        document.getElementById("result").innerText = `最終更新：${updated}`;
-      } else {
-        document.getElementById("result").innerText = "このメールには進捗情報がありません。";
-      }
+      document.getElementById("userName").value = user;
+      document.getElementById("status").value = status;
+      showPreview(user, status, updated);
     }
   });
+
+  // メール本文も読み込んでtaskpaneに反映（見た目統合用）
+  Office.context.mailbox.item.body.getAsync("text", (result) => {
+    if (result.status === Office.AsyncResultStatus.Succeeded) {
+      const mailBody = result.value;
+      const preview = document.createElement("div");
+      preview.id = "mailBodyPreview";
+      preview.style.marginTop = "20px";
+      preview.style.padding = "10px";
+      preview.style.borderTop = "1px solid #ccc";
+      preview.style.whiteSpace = "pre-wrap";
+      preview.innerText = mailBody;
+      document.body.appendChild(preview);
+    }
+  });
+}
+
+function showPreview(user, status, updated) {
+  let existing = document.getElementById("progressPreview");
+  if (!existing) {
+    existing = document.createElement("div");
+    existing.id = "progressPreview";
+    existing.style.marginTop = "15px";
+    existing.style.padding = "10px";
+    existing.style.borderTop = "1px solid #999";
+    existing.style.fontSize = "0.9em";
+    document.body.appendChild(existing);
+  }
+
+  existing.innerHTML = `
+  ────────────────────────────<br>
+  【進捗状況】<br>
+  担当者：${user || "未入力"}<br>
+  状態：${status || "未対応"}<br>
+  更新日時：${updated || "未設定"}<br>
+  ────────────────────────────
+  `;
 }
