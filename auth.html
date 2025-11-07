@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>MailPM Auth</title>
+  <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+</head>
+<body>
+  <h2>MailPM Authentication</h2>
+  <button id="login">Microsoftにサインイン</button>
+
+  <script>
+    const msalConfig = {
+      auth: {
+        clientId: "b36f2478-f887-48ca-b406-d21e17ddc5e7",
+        authority: "c1521ad5-8d23-4d3c-a5c4-e90a535b3c2a",
+        redirectUri: "https://shion003-lab.github.io/mail-progress-tracker/auth.html"
+      }
+    };
+
+    const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+    const loginRequest = {
+      scopes: ["User.Read", "Mail.ReadWrite"]
+    };
+
+    document.getElementById("login").onclick = async () => {
+      const response = await msalInstance.loginPopup(loginRequest);
+      console.log("Login success:", response);
+      const account = response.account;
+      msalInstance.setActiveAccount(account);
+
+      const tokenResponse = await msalInstance.acquireTokenSilent({
+        ...loginRequest,
+        account
+      });
+
+      console.log("Access token:", tokenResponse.accessToken);
+      alert("ログイン成功！トークンを取得しました。コンソールを確認してください。");
+    };
+  </script>
+</body>
+</html>
