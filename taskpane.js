@@ -39,21 +39,6 @@ function loadProgress() {
       showPreview(user, status, updated);
     }
   });
-
-  // メール本文も読み込んでtaskpaneに反映（見た目統合用）
-  Office.context.mailbox.item.body.getAsync("text", (result) => {
-    if (result.status === Office.AsyncResultStatus.Succeeded) {
-      const mailBody = result.value;
-      const preview = document.createElement("div");
-      preview.id = "mailBodyPreview";
-      preview.style.marginTop = "20px";
-      preview.style.padding = "10px";
-      preview.style.borderTop = "1px solid #ccc";
-      preview.style.whiteSpace = "pre-wrap";
-      preview.innerText = mailBody;
-      document.body.appendChild(preview);
-    }
-  });
 }
 
 function showPreview(user, status, updated) {
