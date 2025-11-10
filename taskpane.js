@@ -1,47 +1,57 @@
-Office.onReady(() => {
-  document.getElementById("updateBtn").onclick = saveProgress;
-  loadProgress();
-});
-
-function saveProgress() {
+// メイン処理：進捗反映ボタン押下時に呼ばれる
+function updateStatus() {
   const user = document.getElementById("userName").value || "未入力";
-  const status = document.getElementById("status").value;
-  const now = new Date().toLocaleString("ja-JP");
+  const status = document.getElementById("status").value || "未選択";
+  const updated = new Date().toLocaleString("ja-JP");
 
-  Office.context.mailbox.item.loadCustomPropertiesAsync((result) => {
-    if (result.status === Office.AsyncResultStatus.Succeeded) {
-      const props = result.value;
-      props.set("user", user);
-      props.set("status", status);
-      props.set("updated", now);
-      props.saveAsync((res) => {
-        if (res.status === Office.AsyncResultStatus.Succeeded) {
-          document.getElementById("result").innerText = "進捗情報を保存しました。";
-        } else {
-          document.getElementById("result").innerText = "保存に失敗しました。";
-        }
-      });
-    } else {
-      document.getElementById("result").innerText = "プロパティの読み込みに失敗しました。";
-    }
-  });
+  updateProgressBlock(user, status, updated);
 }
 
-function loadProgress() {
-  Office.context.mailbox.item.loadCustomPropertiesAsync((result) => {
-    if (result.status === Office.AsyncResultStatus.Succeeded) {
-      const props = result.value;
-      const user = props.get("user") || "";
-      const status = props.get("status") || "";
-      const updated = props.get("updated") || "";
+// 本文の MailPM 区切り領域を探して置換または追加
+function updateProgressBlock(user, status, updated) {
+  const blockStart = "────────────────────────";
+  const blockEnd = "────────────────────────";
 
-      if (user || status || updated) {
-        document.getElementById("userName").value = user;
-        document.getElementById("status").value = status || "未対応";
-        document.getElementById("result").innerText = `最終更新：${updated}`;
-      } else {
-        document.getElementById("result").innerText = "このメールには進捗情報がありません。";
-      }
+  const newBlock = `
+${blockStart}
+【進捗状況】
+担当者：${user}
+状態：${status}
+更新日時：${updated}
+${blockEnd}
+`;
+
+  Office.context.mailbox.item.body.getAsync("text", function (res) {
+    if (res.status !== Office.AsyncResultStatus.Succeeded) {
+      alert("本文取得に失敗しました。");
+      return;
     }
+
+    let body = res.value;
+
+    // 既存の MailPM ブロックがあるか？
+    const regex = new RegExp(`${blockStart}[\\s\\S]*?${blockEnd}`, "g");
+
+    if (regex.test(body)) {
+      // 既存ブロックを置換
+      body = body.replace(regex, newBlock);
+    } else {
+      // なければ末尾に追加
+      body = body + "\n" + newBlock;
+    }
+
+    // 本文を更新
+    Office.context.mailbox.item.body.setAsync(
+      body,
+      { coercionType: Office.CoercionType.Text },
+      function (setRes) {
+        if (setRes.status === Office.AsyncResultStatus.Succeeded) {
+          alert("進捗情報を本文に反映しました！");
+        } else {
+          alert("本文の更新に失敗しました。");
+          console.error(setRes.error);
+        }
+      }
+    );
   });
 }
