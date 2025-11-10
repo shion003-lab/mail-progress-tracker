@@ -1,57 +1,103 @@
-// メイン処理：進捗反映ボタン押下時に呼ばれる
-function updateStatus() {
-  const user = document.getElementById("userName").value || "未入力";
-  const status = document.getElementById("status").value || "未選択";
-  const updated = new Date().toLocaleString("ja-JP");
+Office.onReady(() => {
+  document.getElementById("updateBtn").onclick = updateProgress;
+  loadProgress();
+});
 
-  updateProgressBlock(user, status, updated);
+const siteUrl = "https://openloopcojp.sharepoint.com/sites/msteams_ed64e5";
+const listName = "MailProgress";
+
+async function getAccessToken() {
+  return new Promise((resolve, reject) => {
+    Office.auth.getAccessTokenAsync({ forceConsent: false }, (result) => {
+      if (result.status === Office.AsyncResultStatus.Succeeded) {
+        resolve(result.value);
+      } else {
+        reject(result.error);
+      }
+    });
+  });
 }
 
-// 本文の MailPM 区切り領域を探して置換または追加
-function updateProgressBlock(user, status, updated) {
-  const blockStart = "────────────────────────";
-  const blockEnd = "────────────────────────";
+async function updateProgress() {
+  const user = document.getElementById("userName").value || "未入力";
+  const status = document.getElementById("status").value;
+  const now = new Date().toLocaleString("ja-JP");
+  const mail = Office.context.mailbox.item;
+  const mailId = mail.itemId;
 
-  const newBlock = `
-${blockStart}
-【進捗状況】
-担当者：${user}
-状態：${status}
-更新日時：${updated}
-${blockEnd}
-`;
+  try {
+    const token = await getAccessToken();
+    const webUrl = `${siteUrl}/_api/web/lists/GetByTitle('${listName}')/items`;
 
-  Office.context.mailbox.item.body.getAsync("text", function (res) {
-    if (res.status !== Office.AsyncResultStatus.Succeeded) {
-      alert("本文取得に失敗しました。");
-      return;
-    }
-
-    let body = res.value;
-
-    // 既存の MailPM ブロックがあるか？
-    const regex = new RegExp(`${blockStart}[\\s\\S]*?${blockEnd}`, "g");
-
-    if (regex.test(body)) {
-      // 既存ブロックを置換
-      body = body.replace(regex, newBlock);
-    } else {
-      // なければ末尾に追加
-      body = body + "\n" + newBlock;
-    }
-
-    // 本文を更新
-    Office.context.mailbox.item.body.setAsync(
-      body,
-      { coercionType: Office.CoercionType.Text },
-      function (setRes) {
-        if (setRes.status === Office.AsyncResultStatus.Succeeded) {
-          alert("進捗情報を本文に反映しました！");
-        } else {
-          alert("本文の更新に失敗しました。");
-          console.error(setRes.error);
-        }
-      }
+    // 既存レコード確認
+    const checkResp = await fetch(
+      `${webUrl}?$filter=MailID eq '${mailId}'`,
+      { headers: { Authorization: `Bearer ${token}` } }
     );
-  });
+    const data = await checkResp.json();
+
+    let method = "POST";
+    let url = webUrl;
+    let body = {
+      MailID: mailId,
+      担当者: user,
+      状態: status,
+      更新日時: now
+    };
+
+    if (data.value.length > 0) {
+      // 更新
+      method = "PATCH";
+      const itemId = data.value[0].Id;
+      url = `${webUrl}(${itemId})`;
+    }
+
+    const response = await fetch(url, {
+      method,
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json;odata=verbose",
+        "Accept": "application/json;odata=verbose",
+        "IF-MATCH": "*"
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (response.ok) {
+      document.getElementById("result").innerText = "進捗をSharePointに保存しました。";
+    } else {
+      const errText = await response.text();
+      document.getElementById("result").innerText = "保存失敗：" + errText;
+    }
+  } catch (err) {
+    console.error(err);
+    document.getElementById("result").innerText = "トークン取得または通信に失敗しました。";
+  }
+}
+
+async function loadProgress() {
+  const mail = Office.context.mailbox.item;
+  const mailId = mail.itemId;
+
+  try {
+    const token = await getAccessToken();
+    const webUrl = `${siteUrl}/_api/web/lists/GetByTitle('${listName}')/items?$filter=MailID eq '${mailId}'`;
+    const response = await fetch(webUrl, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await response.json();
+
+    if (data.value.length > 0) {
+      const item = data.value[0];
+      document.getElementById("userName").value = item.担当者 || "";
+      document.getElementById("status").value = item.状態 || "未対応";
+      document.getElementById("result").innerText =
+        `最終更新: ${item.更新日時}`;
+    } else {
+      document.getElementById("result").innerText = "進捗データはまだありません。";
+    }
+  } catch (err) {
+    console.error(err);
+    document.getElementById("result").innerText = "読み込みエラー。";
+  }
 }
