@@ -24,25 +24,31 @@
       scopes: ["User.Read", "Mail.ReadWrite"]
     };
 
-    document.getElementById("login").onclick = async () => {
-      try {
-        const response = await msalInstance.loginPopup(loginRequest);
-        const account = response.account;
-        msalInstance.setActiveAccount(account);
+document.getElementById("login").onclick = () => {
+  // popup ではなく redirect を使用
+  msalInstance.loginRedirect(loginRequest);
+};
 
-        const tokenResponse = await msalInstance.acquireTokenSilent({
-          ...loginRequest,
-          account
-        });
+window.onload = async () => {
+  try {
+    const response = await msalInstance.handleRedirectPromise();
+    if (response) {
+      const account = response.account;
+      msalInstance.setActiveAccount(account);
 
-        // トークンを localStorage に保存して taskpane.html から利用可能に
-        localStorage.setItem("graph_access_token", tokenResponse.accessToken);
-        alert("ログイン成功！これでアドインからGraph APIを利用できます。");
-      } catch (err) {
-        console.error(err);
-        alert("ログインに失敗しました。コンソールを確認してください。");
-      }
-    };
+      const tokenResponse = await msalInstance.acquireTokenSilent({
+        ...loginRequest,
+        account
+      });
+      console.log("Access token:", tokenResponse.accessToken);
+      alert("ログイン成功！トークン取得済み");
+    }
+  } catch (err) {
+    console.error("Auth Error:", err);
+    alert("トークン取得に失敗しました。コンソールを確認してください。");
+  }
+};
   </script>
 </body>
 </html>
+
