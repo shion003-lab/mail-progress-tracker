@@ -2,8 +2,9 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>進捗管理</title>
+  <title>進捗管理 MailPM</title>
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script src="taskpane.js"></script>
   <style>
     body { font-family: sans-serif; padding: 10px; }
     label { display: block; margin-top: 8px; }
@@ -27,61 +28,5 @@
 
   <button id="updateBtn">本文に反映</button>
   <div id="result"></div>
-
-  <script>
-    Office.onReady(() => {
-      document.getElementById("updateBtn").onclick = updateStatus;
-    });
-
-    async function updateStatus() {
-      const item = Office.context.mailbox.item;
-      if (!item) {
-        document.getElementById("result").innerText = "メール情報を取得できません。";
-        return;
-      }
-
-      const user = document.getElementById("userName").value || "未入力";
-      const status = document.getElementById("status").value;
-      const now = new Date().toLocaleString("ja-JP");
-
-      const footer = `
-<hr>
-<p><strong>【進捗状況】</strong><br>
-担当者：${user}<br>
-状態：${status}<br>
-更新日時：${now}</p>
-<hr>`;
-
-      try {
-        // 現在の本文を取得
-        item.body.getAsync("html", (res) => {
-          if (res.status === Office.AsyncResultStatus.Succeeded) {
-            let body = res.value;
-
-            // 既存の進捗情報を削除
-            const regex = /<hr>\s*<p><strong>【進捗状況】[\s\S]*?<hr>/gi;
-            body = body.replace(regex, "");
-
-            // 新しい進捗情報を追加（末尾）
-            const newBody = body + footer;
-
-            // 本文を更新
-            item.body.setAsync(newBody, { coercionType: Office.CoercionType.Html }, (r2) => {
-              if (r2.status === Office.AsyncResultStatus.Succeeded) {
-                document.getElementById("result").innerText = "本文に進捗情報を反映しました。";
-              } else {
-                document.getElementById("result").innerText = "本文更新に失敗しました。";
-              }
-            });
-          } else {
-            document.getElementById("result").innerText = "本文の取得に失敗しました。";
-          }
-        });
-      } catch (err) {
-        console.error(err);
-        document.getElementById("result").innerText = "エラーが発生しました。";
-      }
-    }
-  </script>
 </body>
 </html>
