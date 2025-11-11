@@ -12,8 +12,8 @@
   <script>
     const msalConfig = {
       auth: {
-        clientId: "b36f2478-f887-48ca-b406-d21e17ddc5e7",
-        authority: "https://login.microsoftonline.com/c1521ad5-8d23-4d3c-a5c4-e90a535b3c2a", // ← 修正ポイント！
+        clientId: "6dab0e8b-444e-4740-9b93-0ec1f350d062",   // Azure ADで取得したクライアントID
+        authority: "https://login.microsoftonline.com/c1521ad5-8d23-4d3c-a5c4-e90a535b3c2a",
         redirectUri: "https://shion003-lab.github.io/mail-progress-tracker/auth.html"
       }
     };
@@ -27,7 +27,6 @@
     document.getElementById("login").onclick = async () => {
       try {
         const response = await msalInstance.loginPopup(loginRequest);
-        console.log("Login success:", response);
         const account = response.account;
         msalInstance.setActiveAccount(account);
 
@@ -36,11 +35,12 @@
           account
         });
 
-        console.log("Access token:", tokenResponse.accessToken);
-        alert("ログイン成功！トークンを取得しました。コンソールを確認してください。");
+        // トークンを localStorage に保存して taskpane.html から利用可能に
+        localStorage.setItem("graph_access_token", tokenResponse.accessToken);
+        alert("ログイン成功！これでアドインからGraph APIを利用できます。");
       } catch (err) {
-        console.error("Login error:", err);
-        alert("ログインに失敗しました。詳細はコンソールを確認してください。");
+        console.error(err);
+        alert("ログインに失敗しました。コンソールを確認してください。");
       }
     };
   </script>
