@@ -1,58 +1,96 @@
-Office.onReady(() => {
-  document.getElementById("updateBtn").onclick = updateStatus;
+Office.onReady(async (info) => {
+  if (info.host === Office.HostType.Outlook) {
+    document.getElementById("saveBtn").onclick = saveProgress;
+  }
 });
 
-// アクセストークンを localStorage から取得
-function getAccessToken() {
-  const token = localStorage.getItem("graph_access_token");
-  if (!token) {
-    alert("まだMicrosoftにサインインしていません。auth.html でサインインしてください。");
-  }
-  return token;
-}
+const siteUrl = "https://openloopcojp.sharepoint.com/sites/msteams_ed64e5";
+const listName = "MailProgressTracker";
 
-// Graph API でメール本文を更新
-async function updateMailBody(progressText, accessToken) {
-  const itemId = Office.context.mailbox.item.itemId;
-  const endpoint = `https://graph.microsoft.com/v1.0/me/messages/${itemId}`;
-
+// 保存処理
+async function saveProgress() {
   try {
-    const response = await fetch(endpoint, {
-      method: "PATCH",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        body: {
-          contentType: "HTML",
-          content: `<p><strong>進捗状況:</strong> ${progressText}</p>`
+    const item = Office.context.mailbox.item;
+    const messageId = item.internetMessageId; // メール固有ID
+    const status = document.getElementById("status").value;
+    const progress = document.getElementById("progress").value;
+    const comment = document.getElementById("comment").value;
+
+    const me = Office.context.mailbox.userProfile.displayName;
+    const now = new Date().toISOString();
+
+    const digest = await getRequestDigest();
+
+    const itemData = {
+      __metadata: { type: "SP.Data.MailProgressTrackerListItem" },
+      MessageID: messageId,
+      Status: status,
+      Progress: progress,
+      Comment: comment,
+      UpdatedBy: me,
+      UpdatedAt: now
+    };
+
+    // 既存レコードがあるか確認
+    const existing = await fetch(
+      `${siteUrl}/_api/web/lists/getbytitle('${listName}')/items?$filter=MessageID eq '${messageId}'`,
+      { headers: { Accept: "application/json;odata=verbose" } }
+    );
+    const result = await existing.json();
+
+    let response;
+    if (result.d.results.length > 0) {
+      const id = result.d.results[0].Id;
+      response = await fetch(
+        `${siteUrl}/_api/web/lists/getbytitle('${listName}')/items(${id})`,
+        {
+          method: "MERGE",
+          headers: {
+            "X-RequestDigest": digest,
+            "IF-MATCH": "*",
+            "Accept": "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose"
+          },
+          body: JSON.stringify(itemData)
         }
-      })
-    });
+      );
+    } else {
+      response = await fetch(
+        `${siteUrl}/_api/web/lists/getbytitle('${listName}')/items`,
+        {
+          method: "POST",
+          headers: {
+            "X-RequestDigest": digest,
+            "Accept": "application/json;odata=verbose",
+            "Content-Type": "application/json;odata=verbose"
+          },
+          body: JSON.stringify(itemData)
+        }
+      );
+    }
 
     if (response.ok) {
-      document.getElementById("result").innerText = "メール本文に進捗情報を反映しました！";
+      Office.context.mailbox.item.notificationMessages.replaceAsync("progressSaved", {
+        type: "informationalMessage",
+        message: "進捗情報を保存しました。",
+        icon: "icon16",
+        persistent: false
+      });
     } else {
-      const errText = await response.text();
-      console.error("Graph API Error:", errText);
-      document.getElementById("result").innerText = "Graph API呼び出しに失敗しました。コンソールを確認してください。";
+      console.error(await response.text());
+      alert("保存に失敗しました。");
     }
-  } catch (err) {
-    console.error(err);
-    document.getElementById("result").innerText = "通信エラーです。ネットワークを確認してください。";
+  } catch (e) {
+    console.error(e);
+    alert("エラーが発生しました。");
   }
 }
 
-// ボタン押下で進捗情報を取得して反映
-function updateStatus() {
-  const user = document.getElementById("userName").value || "未入力";
-  const status = document.getElementById("status").value;
-  const now = new Date().toLocaleString("ja-JP");
-  const progressText = `担当者: ${user}, 状態: ${status}, 更新日時: ${now}`;
-
-  const accessToken = getAccessToken();
-  if (!accessToken) return;
-
-  updateMailBody(progressText, accessToken);
+async function getRequestDigest() {
+  const res = await fetch(`${siteUrl}/_api/contextinfo`, {
+    method: "POST",
+    headers: { Accept: "application/json;odata=verbose" }
+  });
+  const data = await res.json();
+  return data.d.GetContextWebInformation.FormDigestValue;
 }
