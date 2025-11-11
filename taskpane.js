@@ -1,103 +1,58 @@
 Office.onReady(() => {
-  document.getElementById("updateBtn").onclick = updateProgress;
-  loadProgress();
+  document.getElementById("updateBtn").onclick = updateStatus;
 });
 
-const siteUrl = "https://openloopcojp.sharepoint.com/sites/msteams_ed64e5";
-const listName = "MailProgress";
-
-async function getAccessToken() {
-  return new Promise((resolve, reject) => {
-    Office.auth.getAccessTokenAsync({ forceConsent: false }, (result) => {
-      if (result.status === Office.AsyncResultStatus.Succeeded) {
-        resolve(result.value);
-      } else {
-        reject(result.error);
-      }
-    });
-  });
+// アクセストークンを localStorage から取得
+function getAccessToken() {
+  const token = localStorage.getItem("graph_access_token");
+  if (!token) {
+    alert("まだMicrosoftにサインインしていません。auth.html でサインインしてください。");
+  }
+  return token;
 }
 
-async function updateProgress() {
-  const user = document.getElementById("userName").value || "未入力";
-  const status = document.getElementById("status").value;
-  const now = new Date().toLocaleString("ja-JP");
-  const mail = Office.context.mailbox.item;
-  const mailId = mail.itemId;
+// Graph API でメール本文を更新
+async function updateMailBody(progressText, accessToken) {
+  const itemId = Office.context.mailbox.item.itemId;
+  const endpoint = `https://graph.microsoft.com/v1.0/me/messages/${itemId}`;
 
   try {
-    const token = await getAccessToken();
-    const webUrl = `${siteUrl}/_api/web/lists/GetByTitle('${listName}')/items`;
-
-    // 既存レコード確認
-    const checkResp = await fetch(
-      `${webUrl}?$filter=MailID eq '${mailId}'`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    const data = await checkResp.json();
-
-    let method = "POST";
-    let url = webUrl;
-    let body = {
-      MailID: mailId,
-      担当者: user,
-      状態: status,
-      更新日時: now
-    };
-
-    if (data.value.length > 0) {
-      // 更新
-      method = "PATCH";
-      const itemId = data.value[0].Id;
-      url = `${webUrl}(${itemId})`;
-    }
-
-    const response = await fetch(url, {
-      method,
+    const response = await fetch(endpoint, {
+      method: "PATCH",
       headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json;odata=verbose",
-        "Accept": "application/json;odata=verbose",
-        "IF-MATCH": "*"
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify({
+        body: {
+          contentType: "HTML",
+          content: `<p><strong>進捗状況:</strong> ${progressText}</p>`
+        }
+      })
     });
 
     if (response.ok) {
-      document.getElementById("result").innerText = "進捗をSharePointに保存しました。";
+      document.getElementById("result").innerText = "メール本文に進捗情報を反映しました！";
     } else {
       const errText = await response.text();
-      document.getElementById("result").innerText = "保存失敗：" + errText;
+      console.error("Graph API Error:", errText);
+      document.getElementById("result").innerText = "Graph API呼び出しに失敗しました。コンソールを確認してください。";
     }
   } catch (err) {
     console.error(err);
-    document.getElementById("result").innerText = "トークン取得または通信に失敗しました。";
+    document.getElementById("result").innerText = "通信エラーです。ネットワークを確認してください。";
   }
 }
 
-async function loadProgress() {
-  const mail = Office.context.mailbox.item;
-  const mailId = mail.itemId;
+// ボタン押下で進捗情報を取得して反映
+function updateStatus() {
+  const user = document.getElementById("userName").value || "未入力";
+  const status = document.getElementById("status").value;
+  const now = new Date().toLocaleString("ja-JP");
+  const progressText = `担当者: ${user}, 状態: ${status}, 更新日時: ${now}`;
 
-  try {
-    const token = await getAccessToken();
-    const webUrl = `${siteUrl}/_api/web/lists/GetByTitle('${listName}')/items?$filter=MailID eq '${mailId}'`;
-    const response = await fetch(webUrl, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const data = await response.json();
+  const accessToken = getAccessToken();
+  if (!accessToken) return;
 
-    if (data.value.length > 0) {
-      const item = data.value[0];
-      document.getElementById("userName").value = item.担当者 || "";
-      document.getElementById("status").value = item.状態 || "未対応";
-      document.getElementById("result").innerText =
-        `最終更新: ${item.更新日時}`;
-    } else {
-      document.getElementById("result").innerText = "進捗データはまだありません。";
-    }
-  } catch (err) {
-    console.error(err);
-    document.getElementById("result").innerText = "読み込みエラー。";
-  }
+  updateMailBody(progressText, accessToken);
 }
