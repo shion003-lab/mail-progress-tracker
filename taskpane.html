@@ -2,57 +2,120 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>進捗管理</title>
-  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-  <script src="taskpane.js"></script>
+  <title>MailPM - 進捗管理</title>
   <style>
     body {
       font-family: "Segoe UI", sans-serif;
-      margin: 10px;
+      background-color: #fafafa;
+      color: #333;
+      margin: 0;
+      padding: 0;
     }
+
+    /* メール本文の延長のように見せる枠 */
+    .container {
+      border-top: 1px solid #ddd;
+      padding: 16px;
+      background-color: #fff;
+      box-shadow: 0 -1px 2px rgba(0,0,0,0.05);
+    }
+
     h2 {
-      font-size: 18px;
-      margin-bottom: 8px;
+      font-size: 16px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
-    label {
-      display: block;
-      margin-top: 10px;
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
     }
-    select, input, textarea, button {
+
+    .status span {
+      font-weight: bold;
+    }
+
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .status-pending { background-color: #aaa; }
+    .status-progress { background-color: #f0ad4e; }
+    .status-done { background-color: #5cb85c; }
+
+    select, textarea, button {
       width: 100%;
-      margin-top: 5px;
+      box-sizing: border-box;
+      font-size: 14px;
+      margin-top: 6px;
+      margin-bottom: 12px;
       padding: 6px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
     }
+
+    textarea {
+      height: 60px;
+      resize: vertical;
+    }
+
     button {
       background-color: #0078d4;
-      color: #fff;
+      color: white;
       border: none;
+      border-radius: 4px;
       cursor: pointer;
+      padding: 8px;
     }
+
     button:hover {
       background-color: #005a9e;
+    }
+
+    .meta {
+      font-size: 12px;
+      color: #777;
+      margin-bottom: 12px;
     }
   </style>
 </head>
 <body>
-  <h2>進捗管理</h2>
-  <div>
-    <label>ステータス：</label>
-    <select id="status">
-      <option value="対応中">対応中</option>
+  <div class="container">
+    <h2>📊 メール進捗管理</h2>
+
+    <div class="status">
+      <div id="statusIndicator" class="status-indicator status-pending"></div>
+      <span id="statusText">未着手</span>
+    </div>
+
+    <div class="meta">
+      <div>担当: <span id="assignedUser">未設定</span></div>
+      <div>最終更新: <span id="lastUpdated">--/--/--</span></div>
+    </div>
+
+    <label for="progress">進捗ステータスを変更:</label>
+    <select id="progress">
+      <option value="未着手">未着手</option>
+      <option value="進行中">進行中</option>
       <option value="完了">完了</option>
       <option value="保留">保留</option>
     </select>
 
-    <label>進捗率（％）：</label>
-    <input type="number" id="progress" min="0" max="100" step="10">
+    <label for="comment">コメント（任意）:</label>
+    <textarea id="comment" placeholder="進捗に関するメモを入力"></textarea>
 
-    <label>コメント：</label>
-    <textarea id="comment" rows="3"></textarea>
-
-    <button id="saveBtn">本文に反映</button>
+    <button id="saveButton">保存</button>
   </div>
+
+  <script>
+    // ★この部分は次のSharePoint連携フェーズで実装します
+    document.getElementById("saveButton").onclick = () => {
+      alert("（仮）保存ボタンが押されました");
+    };
+  </script>
 </body>
 </html>
