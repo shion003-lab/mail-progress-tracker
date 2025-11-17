@@ -1,7 +1,7 @@
 Office.onReady((info) => {
   if (info.host === Office.HostType.Outlook) {
-      console.log("Office.js ready");
-      document.getElementById("saveButton").onclick = saveProgress;
+    console.log("Office.js ready");
+    document.getElementById("saveButton").onclick = saveProgress;
   }
 });
 
@@ -12,46 +12,43 @@ async function saveProgress() {
   try {
     const item = Office.context.mailbox.item;
 
-    // メール情報の取得（Graph API不要）
-    const messageId = item.internetMessageId;
-    const subject = item.subject;
-    const from = item.from ? item.from.displayName : "";
-    const receivedTime = item.dateTimeCreated;
+    // メールID（検索キー）
+    const mailId = item.internetMessageId;
 
-    const progress = document.getElementById("progress").value;
+    // UI入力
+    const status = document.getElementById("status").value;
+    const progressValue = parseInt(document.getElementById("progress").value, 10);
     const comment = document.getElementById("comment").value;
+
     const updatedBy = Office.context.mailbox.userProfile.displayName;
     const updatedAt = new Date().toISOString();
 
-    // SharePoint Digest を取得
+    // SP Digest
     const digest = await getRequestDigest();
 
+    // データ本体
     const itemData = {
       __metadata: { type: "SP.Data.MailProgressTrackerListItem" },
-      MessageID: messageId,
-      Subject: subject,
-      From: from,
-      ReceivedTime: receivedTime,
-      Progress: progress,
+      MailID: mailId,
+      Status: status,
+      Progress: progressValue,
       Comment: comment,
       UpdatedBy: updatedBy,
       UpdatedAt: updatedAt
     };
 
-    // 既存アイテムを検索
-    const existing = await fetch(
-      `${siteUrl}/_api/web/lists/getbytitle('${listName}')/items?$filter=MessageID eq '${messageId}'`,
-      {
-        headers: { Accept: "application/json;odata=verbose" }
-      }
+    // 同一MailIDで既存件数検索
+    const check = await fetch(
+      `${siteUrl}/_api/web/lists/getbytitle('${listName}')/items?$filter=MailID eq '${mailId}'`,
+      { headers: { Accept: "application/json;odata=verbose" } }
     );
+    const checkJson = await check.json();
 
-    const result = await existing.json();
     let response;
+    if (checkJson.d.results.length > 0) {
+      // 更新(MERGE)
+      const id = checkJson.d.results[0].Id;
 
-    if (result.d.results.length > 0) {
-      // 既存 → MERGE（更新）
-      const id = result.d.results[0].Id;
       response = await fetch(
         `${siteUrl}/_api/web/lists/getbytitle('${listName}')/items(${id})`,
         {
@@ -66,7 +63,7 @@ async function saveProgress() {
         }
       );
     } else {
-      // 新規 → POST（追加）
+      // 新規追加(POST)
       response = await fetch(
         `${siteUrl}/_api/web/lists/getbytitle('${listName}')/items`,
         {
@@ -86,19 +83,19 @@ async function saveProgress() {
         "progressSaved",
         {
           type: "informationalMessage",
-          message: "進捗情報を SharePoint に保存しました",
+          message: "SharePoint に保存しました",
           icon: "icon16",
           persistent: false
         }
       );
     } else {
       console.error(await response.text());
-      alert("❌ SharePoint 保存に失敗しました。コンソールをご確認ください。");
+      alert("SharePoint 保存に失敗しました。コンソールを確認してください。");
     }
 
-  } catch (e) {
-    console.error(e);
-    alert("❌ 保存中にエラーが発生しました");
+  } catch (err) {
+    console.error(err);
+    alert("保存処理中にエラーが発生しました。");
   }
 }
 
