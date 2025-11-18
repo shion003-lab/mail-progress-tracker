@@ -1,86 +1,68 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>MailPM - 進捗管理</title>
-  <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      background-color: #fafafa;
-      color: #333;
-      margin: 0;
-      padding: 0;
-    }
+    <meta charset="utf-8" />
+    <title>メール進捗管理</title>
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
 
-    .container {
-      border-top: 1px solid #ddd;
-      padding: 16px;
-      background-color: #fff;
-      box-shadow: 0 -1px 2px rgba(0,0,0,0.05);
-    }
-
-    h2 {
-      font-size: 16px;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    select, textarea, button {
-      width: 100%;
-      font-size: 14px;
-      margin-top: 6px;
-      margin-bottom: 12px;
-      padding: 8px;
-    }
-
-    textarea {
-      height: 70px;
-      resize: vertical;
-    }
-
-    button {
-      background-color: #0078d4;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      padding: 10px;
-    }
-
-    button:hover {
-      background-color: #005a9e;
-    }
-  </style>
+    <style>
+        body {
+            margin: 0;
+            padding: 12px;
+            font-family: Arial, sans-serif;
+        }
+        .field {
+            margin-bottom: 12px;
+        }
+        label {
+            display: block;
+            margin-bottom: 4px;
+        }
+        select, textarea, button {
+            width: 100%;
+            padding: 6px;
+            font-size: 14px;
+        }
+        textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        button {
+            margin-top: 10px;
+        }
+    </style>
 </head>
 
 <body>
-  <div class="container">
-    <h2>📊 メール進捗管理</h2>
+    <h3>メール進捗管理</h3>
 
-    <label for="assignedTo">担当者:</label>
-    <select id="assignedTo">
-      <option value="">未設定</option>
-      <option value="伊藤">伊藤</option>
-      <option value="乗田">乗田</option>
-      <option value="佐々木">佐々木</option>
-      <option value="千葉">千葉</option>
-    </select>
+    <div class="field">
+        <label for="assignedTo">担当者</label>
+        <select id="assignedTo">
+            <option value="">（選択してください）</option>
+            <option value="A">担当者A</option>
+            <option value="B">担当者B</option>
+            <option value="C">担当者C</option>
+            <option value="D">担当者D</option>
+        </select>
+    </div>
 
-    <label for="status">ステータス:</label>
-    <select id="status">
-      <option value="未対応">未対応</option>
-      <option value="対応中">対応中</option>
-      <option value="完了">完了</option>
-    </select>
+    <div class="field">
+        <label for="status">進捗状況</label>
+        <select id="status">
+            <option value="未対応">未対応</option>
+            <option value="対応中">対応中</option>
+            <option value="完了">完了</option>
+        </select>
+    </div>
 
-    <label for="comment">備考:</label>
-    <textarea id="comment" placeholder="メモ内容"></textarea>
+    <div class="field">
+        <label for="comment">備考</label>
+        <textarea id="comment"></textarea>
+    </div>
 
     <button id="saveButton">保存</button>
-  </div>
 
-  <script src="taskpane.js"></script>
+    <script src="taskpane.js"></script>
 </body>
 </html>
