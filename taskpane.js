@@ -1,109 +1,61 @@
-Office.onReady((info) => {
-  if (info.host === Office.HostType.Outlook) {
-    console.log("Office.js ready");
-    document.getElementById("saveButton").onclick = saveProgress;
+Office.onReady(async () => {
+  if (Office.context.mailbox) {
+    loadSavedData();
+    document.getElementById("saveButton").onclick = saveData;
   }
 });
 
-const siteUrl = "https://openloopcojp.sharepoint.com/sites/msteams_ed64e5";
-const listName = "MailProgressTracker";
-
-async function saveProgress() {
-  try {
-    const item = Office.context.mailbox.item;
-
-    // メールID（検索キー）
-    const mailId = item.internetMessageId;
-
-    // UI入力
-    const status = document.getElementById("status").value;
-    const progressValue = parseInt(document.getElementById("progress").value, 10);
-    const comment = document.getElementById("comment").value;
-
-    const updatedBy = Office.context.mailbox.userProfile.displayName;
-    const updatedAt = new Date().toISOString();
-
-    // SP Digest
-    const digest = await getRequestDigest();
-
-    // データ本体
-    const itemData = {
-      __metadata: { type: "SP.Data.MailProgressTrackerListItem" },
-      MailID: mailId,
-      Status: status,
-      Progress: progressValue,
-      Comment: comment,
-      UpdatedBy: updatedBy,
-      UpdatedAt: updatedAt
-    };
-
-    // 同一MailIDで既存件数検索
-    const check = await fetch(
-      `${siteUrl}/_api/web/lists/getbytitle('${listName}')/items?$filter=MailID eq '${mailId}'`,
-      { headers: { Accept: "application/json;odata=verbose" } }
-    );
-    const checkJson = await check.json();
-
-    let response;
-    if (checkJson.d.results.length > 0) {
-      // 更新(MERGE)
-      const id = checkJson.d.results[0].Id;
-
-      response = await fetch(
-        `${siteUrl}/_api/web/lists/getbytitle('${listName}')/items(${id})`,
-        {
-          method: "MERGE",
-          headers: {
-            "IF-MATCH": "*",
-            "X-RequestDigest": digest,
-            "Accept": "application/json;odata=verbose",
-            "Content-Type": "application/json;odata=verbose"
-          },
-          body: JSON.stringify(itemData)
-        }
-      );
-    } else {
-      // 新規追加(POST)
-      response = await fetch(
-        `${siteUrl}/_api/web/lists/getbytitle('${listName}')/items`,
-        {
-          method: "POST",
-          headers: {
-            "X-RequestDigest": digest,
-            "Accept": "application/json;odata=verbose",
-            "Content-Type": "application/json;odata=verbose"
-          },
-          body: JSON.stringify(itemData)
-        }
-      );
+// メールの CustomProperties を読み込む
+function loadSavedData() {
+  Office.context.mailbox.item.loadCustomPropertiesAsync((result) => {
+    if (result.status !== Office.AsyncResultStatus.Succeeded) {
+      console.error("CustomProperties 読み込み失敗");
+      return;
     }
 
-    if (response.ok) {
-      Office.context.mailbox.item.notificationMessages.replaceAsync(
-        "progressSaved",
-        {
-          type: "informationalMessage",
-          message: "SharePoint に保存しました",
-          icon: "icon16",
-          persistent: false
-        }
-      );
-    } else {
-      console.error(await response.text());
-      alert("SharePoint 保存に失敗しました。コンソールを確認してください。");
-    }
+    const props = result.value;
 
-  } catch (err) {
-    console.error(err);
-    alert("保存処理中にエラーが発生しました。");
-  }
+    document.getElementById("assignedTo").value =
+      props.get("AssignedTo") || "";
+
+    document.getElementById("status").value =
+      props.get("Status") || "未対応";
+
+    document.getElementById("comment").value =
+      props.get("Comment") || "";
+  });
 }
 
-async function getRequestDigest() {
-  const res = await fetch(`${siteUrl}/_api/contextinfo`, {
-    method: "POST",
-    headers: { Accept: "application/json;odata=verbose" }
+// 保存処理
+function saveData() {
+  Office.context.mailbox.item.loadCustomPropertiesAsync((result) => {
+    if (result.status !== Office.AsyncResultStatus.Succeeded) {
+      console.error("CustomProperties 読み込み失敗");
+      return;
+    }
+
+    const props = result.value;
+
+    // 値をセット
+    props.set("AssignedTo", document.getElementById("assignedTo").value);
+    props.set("Status", document.getElementById("status").value);
+    props.set("Comment", document.getElementById("comment").value);
+
+    // 保存 commit
+    props.saveAsync((asyncResult) => {
+      if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+        Office.context.mailbox.item.notificationMessages.replaceAsync(
+          "saveSuccess",
+          {
+            type: "informationalMessage",
+            message: "進捗を保存しました",
+            icon: "icon16",
+            persistent: false
+          }
+        );
+      } else {
+        alert("保存に失敗しました");
+      }
+    });
   });
-  const data = await res.json();
-  return data.d.GetContextWebInformation.FormDigestValue;
 }
