@@ -1,61 +1,75 @@
-Office.onReady(async () => {
-  if (Office.context.mailbox) {
-    loadSavedData();
-    document.getElementById("saveButton").onclick = saveData;
-  }
+Office.onReady((info) => {
+    if (info.host === Office.HostType.Outlook) {
+        console.log("Outlook Add-in Loaded");
+        document.getElementById("saveButton").addEventListener("click", saveData);
+
+        loadExistingData();
+    }
 });
 
-// メールの CustomProperties を読み込む
-function loadSavedData() {
-  Office.context.mailbox.item.loadCustomPropertiesAsync((result) => {
-    if (result.status !== Office.AsyncResultStatus.Succeeded) {
-      console.error("CustomProperties 読み込み失敗");
-      return;
+/** 現在のメールの一意IDを返す */
+function getMailKey() {
+    try {
+        const mailId = Office.context.mailbox.item.internetMessageId;
+        if (!mailId) {
+            console.error("メールIDが取得できませんでした");
+            return null;
+        }
+        return "mail_" + mailId;
+    } catch (e) {
+        console.error("メールID取得エラー:", e);
+        return null;
     }
-
-    const props = result.value;
-
-    document.getElementById("assignedTo").value =
-      props.get("AssignedTo") || "";
-
-    document.getElementById("status").value =
-      props.get("Status") || "未対応";
-
-    document.getElementById("comment").value =
-      props.get("Comment") || "";
-  });
 }
 
-// 保存処理
+/** 保存処理 */
 function saveData() {
-  Office.context.mailbox.item.loadCustomPropertiesAsync((result) => {
-    if (result.status !== Office.AsyncResultStatus.Succeeded) {
-      console.error("CustomProperties 読み込み失敗");
-      return;
-    }
+    const key = getMailKey();
+    if (!key) return;
 
-    const props = result.value;
+    const data = {
+        assignedTo: document.getElementById("assignedTo").value,
+        status: document.getElementById("status").value,
+        comment: document.getElementById("comment").value,
+        updatedAt: new Date().toISOString(),
+    };
 
-    // 値をセット
-    props.set("AssignedTo", document.getElementById("assignedTo").value);
-    props.set("Status", document.getElementById("status").value);
-    props.set("Comment", document.getElementById("comment").value);
+    try {
+        localStorage.setItem(key, JSON.stringify(data));
+        Office.context.ui.displayDialogAsync;
 
-    // 保存 commit
-    props.saveAsync((asyncResult) => {
-      if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-        Office.context.mailbox.item.notificationMessages.replaceAsync(
-          "saveSuccess",
-          {
+        Office.context.mailbox.item.notificationMessages.replaceAsync("saveInfo", {
             type: "informationalMessage",
-            message: "進捗を保存しました",
+            message: "保存しました。",
             icon: "icon16",
             persistent: false
-          }
-        );
-      } else {
-        alert("保存に失敗しました");
-      }
-    });
-  });
+        });
+    } catch (e) {
+        console.error("保存エラー:", e);
+
+        Office.context.mailbox.item.notificationMessages.replaceAsync("saveError", {
+            type: "errorMessage",
+            message: "保存に失敗しました。"
+        });
+    }
+}
+
+/** 保存済みデータを読み込む */
+function loadExistingData() {
+    const key = getMailKey();
+    if (!key) return;
+
+    try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return;
+
+        const data = JSON.parse(raw);
+
+        if (data.assignedTo) document.getElementById("assignedTo").value = data.assignedTo;
+        if (data.status) document.getElementById("status").value = data.status;
+        if (data.comment) document.getElementById("comment").value = data.comment;
+
+    } catch (e) {
+        console.error("読み込みエラー:", e);
+    }
 }
