@@ -2,6 +2,7 @@ Office.onReady((info) => {
     if (info.host === Office.HostType.Outlook) {
         console.log("Outlook Add-in Loaded");
         document.getElementById("saveButton").addEventListener("click", saveData);
+        document.getElementById("refreshButton").addEventListener("click", refreshData);
         
         // 初期データを読み込む
         loadExistingData();
@@ -32,11 +33,10 @@ function setupMailChangeDetection() {
 function checkMailChanged() {
     try {
         const currentMailId = Office.context.mailbox.item.internetMessageId;
-        console.log("チェック中 - 前回:", lastMailId, "現在:", currentMailId);
         
         // メールIDが変わった = メールが切り替わった
         if (currentMailId !== lastMailId) {
-            console.log("❌ メールが切り替わりました");
+            console.log("メールが切り替わりました");
             console.log("前回:", lastMailId);
             console.log("現在:", currentMailId);
             
@@ -44,15 +44,27 @@ function checkMailChanged() {
             lastMailId = currentMailId;
             
             // フォームをクリアして新しいメールのデータを読み込む
-            console.log("フォームをクリアしています...");
             clearForm();
-            console.log("新しいメールのデータを読み込んでいます...");
             loadExistingData();
         }
     } catch (e) {
         console.error("メール切り替え検知エラー:", e);
-        console.error("スタックトレース:", e.stack);
     }
+}
+
+/** 更新ボタン押下時の処理 */
+function refreshData() {
+    console.log("更新ボタンがクリックされました");
+    clearForm();
+    loadExistingData();
+    
+    // フィードバック表示
+    Office.context.mailbox.item.notificationMessages.replaceAsync("refreshInfo", {
+        type: "informationalMessage",
+        message: "データを更新しました。",
+        icon: "icon16",
+        persistent: false
+    });
 }
 
 /** フォームをリセット */
