@@ -6,27 +6,49 @@ Office.onReady((info) => {
         // 初期データを読み込む
         loadExistingData();
         
-        // メール切り替え時に自動更新するイベントリスナーを設定
-        setupItemChangeListener();
+        // メール切り替え検知をポーリングで実装
+        setupMailChangeDetection();
     }
 });
 
-/** メール切り替え時のイベントリスナーを設定 */
-function setupItemChangeListener() {
+/** 前回チェックしたメールIDを保持 */
+let lastMailId = null;
+
+/** メール切り替え検知を設定（ポーリング方式） */
+function setupMailChangeDetection() {
     try {
-        Office.context.mailbox.item.addHandlerAsync(Office.EventType.ItemChanged, onItemChanged);
-        console.log("ItemChanged イベントリスナーを設定しました");
+        // 初期メールIDを取得
+        lastMailId = Office.context.mailbox.item.internetMessageId;
+        
+        // 1秒ごとにメールが切り替わったかチェック
+        setInterval(checkMailChanged, 1000);
+        console.log("メール切り替え検知を開始しました");
     } catch (e) {
-        console.error("イベントリスナー設定エラー:", e);
+        console.error("メール切り替え検知設定エラー:", e);
     }
 }
 
-/** メール切り替え時に自動実行されるハンドラー */
-function onItemChanged(eventArgs) {
-    console.log("メールが切り替わりました");
-    // フォームをクリアして新しいメールのデータを読み込む
-    clearForm();
-    loadExistingData();
+/** メール切り替えをチェック */
+function checkMailChanged() {
+    try {
+        const currentMailId = Office.context.mailbox.item.internetMessageId;
+        
+        // メールIDが変わった = メールが切り替わった
+        if (currentMailId !== lastMailId) {
+            console.log("メールが切り替わりました");
+            console.log("前回:", lastMailId);
+            console.log("現在:", currentMailId);
+            
+            // 前回のメールIDを更新
+            lastMailId = currentMailId;
+            
+            // フォームをクリアして新しいメールのデータを読み込む
+            clearForm();
+            loadExistingData();
+        }
+    } catch (e) {
+        console.error("メール切り替え検知エラー:", e);
+    }
 }
 
 /** フォームをリセット */
