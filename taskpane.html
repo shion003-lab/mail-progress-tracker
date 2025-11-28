@@ -4,12 +4,37 @@
     <meta charset="utf-8" />
     <title>メール進捗管理</title>
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-
     <style>
         body {
             margin: 0;
             padding: 12px;
             font-family: Arial, sans-serif;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .header h3 {
+            margin: 0;
+            flex: 1;
+        }
+        .refresh-btn {
+            background-color: #0078d4;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .refresh-btn:hover {
+            background-color: #005a9e;
+        }
+        .refresh-btn:active {
+            transform: scale(0.98);
         }
         .field {
             margin-bottom: 12px;
@@ -17,25 +42,38 @@
         label {
             display: block;
             margin-bottom: 4px;
+            font-weight: bold;
         }
         select, textarea, button {
             width: 100%;
             padding: 6px;
             font-size: 14px;
+            box-sizing: border-box;
         }
         textarea {
             height: 80px;
             resize: vertical;
+            font-family: Arial, sans-serif;
         }
-        button {
+        #saveButton {
             margin-top: 10px;
+            background-color: #107c10;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #saveButton:hover {
+            background-color: #086207;
         }
     </style>
 </head>
-
 <body>
-    <h3>メール進捗管理</h3>
-
+    <div class="header">
+        <h3>メール進捗管理</h3>
+        <button class="refresh-btn" id="refreshButton">🔄 更新</button>
+    </div>
+    
     <div class="field">
         <label for="assignedTo">担当者</label>
         <select id="assignedTo">
@@ -46,7 +84,6 @@
             <option value="千葉">千葉</option>
         </select>
     </div>
-
     <div class="field">
         <label for="status">進捗状況</label>
         <select id="status">
@@ -55,15 +92,11 @@
             <option value="完了">完了</option>
         </select>
     </div>
-
     <div class="field">
         <label for="comment">備考</label>
         <textarea id="comment"></textarea>
     </div>
-
     <button id="saveButton">保存</button>
-
     <script src="taskpane.js"></script>
 </body>
 </html>
-
