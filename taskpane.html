@@ -10,32 +10,7 @@
             padding: 12px;
             font-family: Arial, sans-serif;
         }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-        .header h3 {
-            margin: 0;
-            flex: 1;
-        }
-        .refresh-btn {
-            background-color: #0078d4;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            white-space: nowrap;
-        }
-        .refresh-btn:hover {
-            background-color: #005a9e;
-        }
-        .refresh-btn:active {
-            transform: scale(0.98);
-        }
+
         .field {
             margin-bottom: 12px;
         }
@@ -66,13 +41,26 @@
         #saveButton:hover {
             background-color: #086207;
         }
+        .refresh-btn {
+            background-color: #0078d4;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        .refresh-btn:hover {
+            background-color: #005a9e;
+        }
+        .refresh-btn:active {
+            transform: scale(0.98);
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h3>メール進捗管理</h3>
-        <button class="refresh-btn" id="refreshButton">🔄 更新</button>
-    </div>
+    <h3>メール進捗管理</h3>
     
     <div class="field">
         <label for="assignedTo">担当者</label>
@@ -97,6 +85,7 @@
         <textarea id="comment"></textarea>
     </div>
     <button id="saveButton">保存</button>
+    <button class="refresh-btn" id="refreshButton">🔄 更新</button>
     <script src="taskpane.js"></script>
 </body>
 </html>
