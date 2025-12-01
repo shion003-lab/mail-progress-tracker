@@ -55,43 +55,10 @@ function checkMailChanged() {
 /** 更新ボタン押下時の処理 */
 function refreshData() {
     console.log("=== 更新ボタンがクリックされました ===");
-    console.log("現在の lastMailId:", lastMailId);
-    console.log("localStorage の全キー:", Object.keys(localStorage));
+    console.log("ページをリロードして最新のメールコンテキストを取得します");
     
-    // Office.context を再確認
-    if (!Office.context || !Office.context.mailbox || !Office.context.mailbox.item) {
-        console.error("Office コンテキストが利用できません。ページをリロードします。");
-        window.location.reload();
-        return;
-    }
-    
-    // 現在のメールIDを強制的に再取得
-    const currentMailId = Office.context.mailbox.item.internetMessageId;
-    console.log("更新時のメールID:", currentMailId);
-    console.log("取得されるキー:", getMailKey());
-    
-    // 前回と異なる場合は lastMailId を更新
-    if (currentMailId !== lastMailId) {
-        console.log("✅ メールIDが変わっています:", lastMailId, "→", currentMailId);
-        lastMailId = currentMailId;
-    } else {
-        console.log("❌ メールIDは変わっていません");
-    }
-    
-    clearForm();
-    loadExistingData();
-    
-    // フィードバック表示（Office コンテキストが有効な場合のみ）
-    try {
-        Office.context.mailbox.item.notificationMessages.replaceAsync("refreshInfo", {
-            type: "informationalMessage",
-            message: "データを更新しました。",
-            icon: "icon16",
-            persistent: false
-        });
-    } catch (e) {
-        console.warn("通知表示に失敗しました:", e);
-    }
+    // ページをリロードして、選択中のメールで再起動
+    window.location.reload();
 }
 
 /** フォームをリセット */
