@@ -4,13 +4,27 @@
     <meta charset="utf-8" />
     <title>メール進捗管理</title>
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <!-- MSAL.js ライブラリ -->
+    <script src="https://alcdn.msauth.net/browser/2.32.2/js/msal-browser.min.js"></script>
     <style>
         body {
             margin: 0;
             padding: 12px;
             font-family: Arial, sans-serif;
         }
-
+        h3 {
+            margin-top: 0;
+        }
+        .auth-section {
+            margin-bottom: 16px;
+            padding: 10px;
+            background-color: #f3f2f1;
+            border-radius: 4px;
+        }
+        .auth-status {
+            font-size: 12px;
+            color: #605e5c;
+        }
         .field {
             margin-bottom: 12px;
         }
@@ -30,13 +44,22 @@
             resize: vertical;
             font-family: Arial, sans-serif;
         }
-        #saveButton {
-            margin-top: 10px;
-            background-color: #107c10;
-            color: white;
+        button {
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            margin-top: 8px;
+        }
+        #loginButton {
+            background-color: #0078d4;
+            color: white;
+        }
+        #loginButton:hover {
+            background-color: #005a9e;
+        }
+        #saveButton {
+            background-color: #107c10;
+            color: white;
         }
         #saveButton:hover {
             background-color: #086207;
@@ -44,48 +67,59 @@
         .refresh-btn {
             background-color: #0078d4;
             color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-top: 8px;
         }
         .refresh-btn:hover {
             background-color: #005a9e;
         }
-        .refresh-btn:active {
-            transform: scale(0.98);
+        .hidden {
+            display: none;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #605e5c;
         }
     </style>
 </head>
 <body>
     <h3>メール進捗管理</h3>
     
-    <div class="field">
-        <label for="assignedTo">担当者</label>
-        <select id="assignedTo">
-            <option value="">（選択してください）</option>
-            <option value="伊藤">伊藤</option>
-            <option value="乗田">乗田</option>
-            <option value="佐々木">佐々木</option>
-            <option value="千葉">千葉</option>
-        </select>
+    <div id="authSection" class="auth-section">
+        <div id="authStatus" class="auth-status">認証が必要です</div>
+        <button id="loginButton">Microsoft にサインイン</button>
     </div>
-    <div class="field">
-        <label for="status">進捗状況</label>
-        <select id="status">
-            <option value="未対応">未対応</option>
-            <option value="対応中">対応中</option>
-            <option value="完了">完了</option>
-        </select>
+    
+    <div id="mainContent" class="hidden">
+        <div class="field">
+            <label for="assignedTo">担当者</label>
+            <select id="assignedTo">
+                <option value="">（選択してください）</option>
+                <option value="伊藤">伊藤</option>
+                <option value="乗田">乗田</option>
+                <option value="佐々木">佐々木</option>
+                <option value="千葉">千葉</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="status">進捗状況</label>
+            <select id="status">
+                <option value="未対応">未対応</option>
+                <option value="対応中">対応中</option>
+                <option value="完了">完了</option>
+            </select>
+        </div>
+        <div class="field">
+            <label for="comment">備考</label>
+            <textarea id="comment"></textarea>
+        </div>
+        <button id="saveButton">保存</button>
+        <button class="refresh-btn" id="refreshButton">🔄 更新</button>
     </div>
-    <div class="field">
-        <label for="comment">備考</label>
-        <textarea id="comment"></textarea>
+    
+    <div id="loadingIndicator" class="loading hidden">
+        読み込み中...
     </div>
-    <button id="saveButton">保存</button>
-    <button class="refresh-btn" id="refreshButton">🔄 更新</button>
+    
     <script src="taskpane.js"></script>
 </body>
 </html>
