@@ -38,18 +38,41 @@ Office.onReady((info) => {
         document.getElementById("loginButton").addEventListener("click", signIn);
         document.getElementById("saveButton").addEventListener("click", saveData);
         document.getElementById("refreshButton").addEventListener("click", refreshData);
+        
+        // Enterキーでサインイン
+        document.getElementById("passwordInput").addEventListener("keypress", (e) => {
+            if (e.key === 'Enter') signIn();
+        });
     }
 });
 
-/** Google サインイン */
+/** メール/パスワードでサインイン */
 async function signIn() {
+    const email = document.getElementById("emailInput").value.trim();
+    const password = document.getElementById("passwordInput").value;
+    
+    if (!email || !password) {
+        alert("メールアドレスとパスワードを入力してください");
+        return;
+    }
+    
     try {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        await auth.signInWithPopup(provider);
+        await auth.signInWithEmailAndPassword(email, password);
         console.log("サインインに成功しました");
     } catch (error) {
         console.error("サインインエラー:", error);
-        alert("サインインに失敗しました: " + error.message);
+        
+        // エラーメッセージを日本語で表示
+        let errorMessage = "サインインに失敗しました";
+        if (error.code === 'auth/user-not-found') {
+            errorMessage = "このメールアドレスは登録されていません";
+        } else if (error.code === 'auth/wrong-password') {
+            errorMessage = "パスワードが正しくありません";
+        } else if (error.code === 'auth/invalid-email') {
+            errorMessage = "メールアドレスの形式が正しくありません";
+        }
+        
+        alert(errorMessage);
     }
 }
 
@@ -57,14 +80,14 @@ async function signIn() {
 function updateUIForSignedIn() {
     const displayName = currentUser.displayName || currentUser.email;
     document.getElementById("authStatus").textContent = `サインイン中: ${displayName}`;
-    document.getElementById("loginButton").classList.add("hidden");
+    document.getElementById("authSection").classList.add("hidden");
     document.getElementById("mainContent").classList.remove("hidden");
 }
 
 /** UI を更新（サインアウト） */
 function updateUIForSignedOut() {
-    document.getElementById("authStatus").textContent = "認証が必要です";
-    document.getElementById("loginButton").classList.remove("hidden");
+    document.getElementById("authStatus").textContent = "サインインしてください";
+    document.getElementById("authSection").classList.remove("hidden");
     document.getElementById("mainContent").classList.add("hidden");
 }
 
