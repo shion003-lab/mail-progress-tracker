@@ -1,67 +1,52 @@
-// MSAL 設定
-const msalConfig = {
-    auth: {
-        clientId: "911ced4f-3287-4de9-a6e5-b706b323b2f5",
-        authority: "https://login.microsoftonline.com/c1521ad5-8d23-4d3c-a5c4-e90a535b3c2a",
-        redirectUri: "https://shion003-lab.github.io/mail-progress-tracker/taskpane.html"
-    },
-    cache: {
-        cacheLocation: "localStorage",
-        storeAuthStateInCookie: false
-    }
+// Firebase 設定
+const firebaseConfig = {
+    apiKey: "AIzaSyAWM90N8W3QM4HoX_SEU10Rt8UTgKj4nrU",
+    authDomain: "mail-progress-tracker.firebaseapp.com",
+    projectId: "mail-progress-tracker",
+    storageBucket: "mail-progress-tracker.firebasestorage.app",
+    messagingSenderId: "1047658950318",
+    appId: "1:1047658950318:web:5cc67b7897bb1d590a073f"
 };
 
-// SharePoint 設定
-const sharepointConfig = {
-    siteUrl: "https://openloopcojp.sharepoint.com/sites/msteams_ed64e5",
-    listName: "MailProgress"
-};
-
-// アクセス許可スコープ
-const loginRequest = {
-    scopes: ["Sites.ReadWrite.All", "User.Read"]
-};
-
-let msalInstance;
+// Firebase 初期化
+let db;
+let auth;
 let currentUser = null;
 
 Office.onReady((info) => {
     if (info.host === Office.HostType.Outlook) {
         console.log("Outlook Add-in Loaded");
         
-        // MSAL インスタンスを初期化
-        msalInstance = new msal.PublicClientApplication(msalConfig);
+        // Firebase を初期化
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        auth = firebase.auth();
+        
+        // 認証状態の変更を監視
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                updateUIForSignedIn();
+                loadExistingData();
+            } else {
+                currentUser = null;
+                updateUIForSignedOut();
+            }
+        });
         
         // イベントリスナーを設定
         document.getElementById("loginButton").addEventListener("click", signIn);
         document.getElementById("saveButton").addEventListener("click", saveData);
         document.getElementById("refreshButton").addEventListener("click", refreshData);
-        
-        // 既存の認証状態を確認
-        checkAuthStatus();
     }
 });
 
-/** 認証状態を確認 */
-async function checkAuthStatus() {
-    const accounts = msalInstance.getAllAccounts();
-    
-    if (accounts.length > 0) {
-        currentUser = accounts[0];
-        updateUIForSignedIn();
-        await loadExistingData();
-    } else {
-        updateUIForSignedOut();
-    }
-}
-
-/** サインイン処理 */
+/** Google サインイン */
 async function signIn() {
     try {
-        const loginResponse = await msalInstance.loginPopup(loginRequest);
-        currentUser = loginResponse.account;
-        updateUIForSignedIn();
-        await loadExistingData();
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await auth.signInWithPopup(provider);
+        console.log("サインインに成功しました");
     } catch (error) {
         console.error("サインインエラー:", error);
         alert("サインインに失敗しました: " + error.message);
@@ -70,7 +55,8 @@ async function signIn() {
 
 /** UI を更新（サインイン済み） */
 function updateUIForSignedIn() {
-    document.getElementById("authStatus").textContent = `サインイン中: ${currentUser.username}`;
+    const displayName = currentUser.displayName || currentUser.email;
+    document.getElementById("authStatus").textContent = `サインイン中: ${displayName}`;
     document.getElementById("loginButton").classList.add("hidden");
     document.getElementById("mainContent").classList.remove("hidden");
 }
@@ -82,25 +68,6 @@ function updateUIForSignedOut() {
     document.getElementById("mainContent").classList.add("hidden");
 }
 
-/** アクセストークンを取得 */
-async function getAccessToken() {
-    const account = msalInstance.getAllAccounts()[0];
-    
-    const request = {
-        scopes: loginRequest.scopes,
-        account: account
-    };
-    
-    try {
-        const response = await msalInstance.acquireTokenSilent(request);
-        return response.accessToken;
-    } catch (error) {
-        console.log("サイレント取得失敗、ポップアップで再試行:", error);
-        const response = await msalInstance.acquireTokenPopup(request);
-        return response.accessToken;
-    }
-}
-
 /** 現在のメールの一意IDを返す */
 function getMailKey() {
     try {
@@ -109,14 +76,15 @@ function getMailKey() {
             console.error("メールIDが取得できませんでした");
             return null;
         }
-        return mailId;
+        // メールIDをFirestoreのドキュメントIDとして使えるように正規化
+        return mailId.replace(/[<>]/g, '').replace(/[@.]/g, '_');
     } catch (e) {
         console.error("メールID取得エラー:", e);
         return null;
     }
 }
 
-/** SharePoint リストから既存データを取得 */
+/** Firestore から既存データを取得 */
 async function loadExistingData() {
     const mailId = getMailKey();
     if (!mailId) return;
@@ -124,35 +92,28 @@ async function loadExistingData() {
     showLoading(true);
     
     try {
-        const accessToken = await getAccessToken();
+        const docRef = db.collection('mailProgress').doc(mailId);
+        const doc = await docRef.get();
         
-        // SharePoint リストをクエリ
-        const filter = `fields/MailID eq '${mailId}'`;
-        const endpoint = `https://graph.microsoft.com/v1.0/sites/${await getSiteId()}/lists/${await getListId()}/items?$expand=fields&$filter=${encodeURIComponent(filter)}`;
-        
-        const response = await fetch(endpoint, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
+        if (doc.exists) {
+            const data = doc.data();
+            
+            if (data.assignedTo) document.getElementById("assignedTo").value = data.assignedTo;
+            if (data.status) document.getElementById("status").value = data.status;
+            if (data.comment) document.getElementById("comment").value = data.comment;
+            
+            // 最終更新情報を表示
+            if (data.updatedBy && data.updatedAt) {
+                const updatedDate = new Date(data.updatedAt.toDate()).toLocaleString('ja-JP');
+                document.getElementById("lastUpdatedInfo").textContent = 
+                    `最終更新: ${updatedDate} by ${data.updatedBy}`;
             }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data.value && data.value.length > 0) {
-            const item = data.value[0].fields;
             
-            if (item.AssignedTo) document.getElementById("assignedTo").value = item.AssignedTo;
-            if (item.Status) document.getElementById("status").value = item.Status;
-            if (item.Comment) document.getElementById("comment").value = item.Comment;
-            
-            console.log("データを読み込みました:", item);
+            console.log("データを読み込みました:", data);
         } else {
             console.log("このメールにはまだ保存データがありません");
             clearForm();
+            document.getElementById("lastUpdatedInfo").textContent = "";
         }
     } catch (error) {
         console.error("データ読み込みエラー:", error);
@@ -162,69 +123,39 @@ async function loadExistingData() {
     }
 }
 
-/** SharePoint リストにデータを保存 */
+/** Firestore にデータを保存 */
 async function saveData() {
+    if (!currentUser) {
+        alert("サインインが必要です");
+        return;
+    }
+    
     const mailId = getMailKey();
     if (!mailId) return;
     
     showLoading(true);
     
-    const itemData = {
-        fields: {
-            MailID: mailId,
-            AssignedTo: document.getElementById("assignedTo").value,
-            Status: document.getElementById("status").value,
-            Comment: document.getElementById("comment").value,
-            UpdatedBy: currentUser.username,
-            UpdatedAt: new Date().toISOString()
-        }
+    const data = {
+        mailId: Office.context.mailbox.item.internetMessageId,
+        assignedTo: document.getElementById("assignedTo").value,
+        status: document.getElementById("status").value,
+        comment: document.getElementById("comment").value,
+        updatedBy: currentUser.displayName || currentUser.email,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     
     try {
-        const accessToken = await getAccessToken();
-        
-        // 既存のアイテムを検索
-        const filter = `fields/MailID eq '${mailId}'`;
-        const searchEndpoint = `https://graph.microsoft.com/v1.0/sites/${await getSiteId()}/lists/${await getListId()}/items?$expand=fields&$filter=${encodeURIComponent(filter)}`;
-        
-        const searchResponse = await fetch(searchEndpoint, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
-        });
-        
-        const searchData = await searchResponse.json();
-        
-        let endpoint;
-        let method;
-        
-        if (searchData.value && searchData.value.length > 0) {
-            // 更新
-            const itemId = searchData.value[0].id;
-            endpoint = `https://graph.microsoft.com/v1.0/sites/${await getSiteId()}/lists/${await getListId()}/items/${itemId}/fields`;
-            method = 'PATCH';
-        } else {
-            // 新規作成
-            endpoint = `https://graph.microsoft.com/v1.0/sites/${await getSiteId()}/lists/${await getListId()}/items`;
-            method = 'POST';
-        }
-        
-        const response = await fetch(endpoint, {
-            method: method,
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(method === 'POST' ? itemData : itemData.fields)
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
+        const docRef = db.collection('mailProgress').doc(mailId);
+        await docRef.set(data, { merge: true });
         
         alert("保存しました");
-        console.log("データを保存しました");
+        console.log("データを保存しました:", data);
         
+        // 最終更新情報を即座に更新
+        const now = new Date().toLocaleString('ja-JP');
+        document.getElementById("lastUpdatedInfo").textContent = 
+            `最終更新: ${now} by ${data.updatedBy}`;
+            
     } catch (error) {
         console.error("保存エラー:", error);
         alert("保存に失敗しました: " + error.message);
@@ -255,44 +186,4 @@ function showLoading(show) {
         document.getElementById("loadingIndicator").classList.add("hidden");
         document.getElementById("mainContent").style.opacity = "1";
     }
-}
-
-/** SharePoint サイトIDを取得（キャッシュ） */
-let cachedSiteId = null;
-async function getSiteId() {
-    if (cachedSiteId) return cachedSiteId;
-    
-    const accessToken = await getAccessToken();
-    const siteUrl = sharepointConfig.siteUrl.replace('https://', '').replace('/sites/', ':/sites/');
-    const endpoint = `https://graph.microsoft.com/v1.0/sites/${siteUrl}`;
-    
-    const response = await fetch(endpoint, {
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
-    
-    const data = await response.json();
-    cachedSiteId = data.id;
-    return cachedSiteId;
-}
-
-/** SharePoint リストIDを取得（キャッシュ） */
-let cachedListId = null;
-async function getListId() {
-    if (cachedListId) return cachedListId;
-    
-    const accessToken = await getAccessToken();
-    const siteId = await getSiteId();
-    const endpoint = `https://graph.microsoft.com/v1.0/sites/${siteId}/lists/${sharepointConfig.listName}`;
-    
-    const response = await fetch(endpoint, {
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        }
-    });
-    
-    const data = await response.json();
-    cachedListId = data.id;
-    return cachedListId;
 }
