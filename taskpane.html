@@ -55,12 +55,18 @@
             cursor: pointer;
             margin-top: 8px;
         }
-        #loginButton {
+        #loginButtonGoogle, #loginButtonMicrosoft {
             background-color: #0078d4;
             color: white;
         }
-        #loginButton:hover {
+        #loginButtonGoogle:hover, #loginButtonMicrosoft:hover {
             background-color: #005a9e;
+        }
+        #loginButtonMicrosoft {
+            background-color: #00a4ef;
+        }
+        #loginButtonMicrosoft:hover {
+            background-color: #008cc9;
         }
         #saveButton {
             background-color: #107c10;
@@ -96,8 +102,16 @@
     <h3>メール進捗管理</h3>
     
     <div id="authSection" class="auth-section">
-        <div id="authStatus" class="auth-status">認証が必要です</div>
-        <button id="loginButton">Google でサインイン</button>
+        <div id="authStatus" class="auth-status">サインインしてください</div>
+        <div class="field">
+            <label for="emailInput">メールアドレス</label>
+            <input type="email" id="emailInput" placeholder="user@company.com" />
+        </div>
+        <div class="field">
+            <label for="passwordInput">パスワード</label>
+            <input type="password" id="passwordInput" placeholder="パスワード" />
+        </div>
+        <button id="loginButton">サインイン</button>
     </div>
     
     <div id="mainContent" class="hidden">
