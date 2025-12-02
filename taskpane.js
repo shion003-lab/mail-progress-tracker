@@ -125,18 +125,10 @@ async function loadExistingData() {
             if (data.status) document.getElementById("status").value = data.status;
             if (data.comment) document.getElementById("comment").value = data.comment;
             
-            // 最終更新情報を表示
-            if (data.updatedBy && data.updatedAt) {
-                const updatedDate = new Date(data.updatedAt.toDate()).toLocaleString('ja-JP');
-                document.getElementById("lastUpdatedInfo").textContent = 
-                    `最終更新: ${updatedDate} by ${data.updatedBy}`;
-            }
-            
             console.log("データを読み込みました:", data);
         } else {
             console.log("このメールにはまだ保存データがありません");
             clearForm();
-            document.getElementById("lastUpdatedInfo").textContent = "";
         }
     } catch (error) {
         console.error("データ読み込みエラー:", error);
@@ -173,11 +165,6 @@ async function saveData() {
         
         alert("保存しました");
         console.log("データを保存しました:", data);
-        
-        // 最終更新情報を即座に更新
-        const now = new Date().toLocaleString('ja-JP');
-        document.getElementById("lastUpdatedInfo").textContent = 
-            `最終更新: ${now} by ${data.updatedBy}`;
             
     } catch (error) {
         console.error("保存エラー:", error);
